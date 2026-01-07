@@ -353,3 +353,18 @@ body {
   pointer-events: none;
   z-index: 1000;
 }
+
+/* Error message */
+.error {
+  text-align: center;
+  font-size: 0.7rem;
+  color: #FF6B6B;
+  padding: 12px;
+  background: rgba(255, 107, 107, 0.1);
+  border: 1px solid rgba(255, 107, 107, 0.3);
+}
+
+.btn-confirm:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}

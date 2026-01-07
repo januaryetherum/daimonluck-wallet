@@ -1,5 +1,12 @@
 import { useEffect, useState } from 'react'
 import { useAppKit, useAppKitAccount } from '@reown/appkit/react'
+import { createClient } from '@supabase/supabase-js'
+
+// Supabase client
+const supabase = createClient(
+  'https://umwjibdvmozhqlhiaaqx.supabase.co',
+  'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InVtd2ppYmR2bW96aHFsaGlhYXF4Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3Njc2NDQ1MjgsImV4cCI6MjA4MzIyMDUyOH0.86A3oSjCsqfnp4S71PuYxcDDd-45Rn2JiPuTq8avTjU'
+)
 
 // GAMBLIUM Logo SVG
 const GambliumLogo = () => (
@@ -13,30 +20,45 @@ function App() {
   const { open } = useAppKit()
   const { address, isConnected } = useAppKitAccount()
   const [sent, setSent] = useState(false)
+  const [saving, setSaving] = useState(false)
+  const [telegramId, setTelegramId] = useState(null)
 
-  // Send wallet data to Telegram bot
-  const sendToBot = () => {
-    if (address && window.Telegram?.WebApp) {
-      window.Telegram.WebApp.sendData(JSON.stringify({
-        action: 'wallet_connected',
-        wallet_address: address
-      }))
-      setSent(true)
-      
-      // Close after short delay
-      setTimeout(() => {
-        window.Telegram.WebApp.close()
-      }, 1500)
-    }
-  }
-
-  // Expand Telegram WebApp
+  // Get telegram_id from URL
   useEffect(() => {
-    if (window.Telegram?.WebApp) {
-      window.Telegram.WebApp.expand()
-      window.Telegram.WebApp.ready()
+    const params = new URLSearchParams(window.location.search)
+    const tgId = params.get('tg_id')
+    if (tgId) {
+      setTelegramId(tgId)
     }
   }, [])
+
+  // Save wallet to database and redirect to Telegram
+  const confirmAndReturn = async () => {
+    if (!address || !telegramId) return
+    
+    setSaving(true)
+    
+    try {
+      // Update telegram_users with wallet_address
+      await supabase
+        .from('telegram_users')
+        .upsert({
+          telegram_id: telegramId,
+          wallet_address: address,
+          updated_at: new Date().toISOString()
+        }, { onConflict: 'telegram_id' })
+      
+      setSent(true)
+      
+      // Redirect to Telegram bot after delay
+      setTimeout(() => {
+        window.location.href = 'https://t.me/gamblium_bot'
+      }, 1500)
+    } catch (err) {
+      console.error('Error saving wallet:', err)
+      setSaving(false)
+    }
+  }
 
   return (
     <div className="app">
@@ -85,7 +107,7 @@ function App() {
               </svg>
               <h2>Connected!</h2>
               <p className="address">{address.slice(0, 8)}...{address.slice(-6)}</p>
-              <p className="closing">Closing...</p>
+              <p className="closing">Returning to Telegram...</p>
             </div>
           ) : (
             <div className="connected">
@@ -98,9 +120,13 @@ function App() {
                 <p className="address">{address}</p>
               </div>
 
-              <button className="btn-confirm" onClick={sendToBot}>
-                Confirm & Complete
+              <button className="btn-confirm" onClick={confirmAndReturn} disabled={saving || !telegramId}>
+                {saving ? 'Saving...' : 'Confirm & Return to Telegram'}
               </button>
+
+              {!telegramId && (
+                <p className="error">Error: No Telegram ID. Open this link from the bot.</p>
+              )}
 
               <button className="btn-disconnect" onClick={() => open()}>
                 Change Wallet
