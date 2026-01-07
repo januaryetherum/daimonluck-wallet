@@ -49,7 +49,7 @@ function App() {
           <span className="title-main">CONNECT </span>
           <span className="title-accent">WALLET</span>
         </h1>
-        <p className="subtitle">Link your Solana wallet to DaimonLuck</p>
+        <p className="subtitle">Link your Solana wallet to Gamblium</p>
       </div>
 
       {/* Status Card */}
